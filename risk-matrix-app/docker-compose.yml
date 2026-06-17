@@ -1,40 +1,90 @@
+name: sud-erp
+
 services:
   mongodb:
     image: mongo:7.0
-    container_name: sud-erp-mongodb
-    ports:
-      - "27017:27017"
+    container_name: se-mongodb
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-password123}
     volumes:
       - mongo_data:/data/db
+    networks:
+      - se-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 1m
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    command: mongod --setParameter logComponentVerbosity='{"network":{"verbosity":-1}}'
 
   backend:
     build: ./backend
-    container_name: sud-erp-backend
+    container_name: se-backend
     expose:
       - "8000"
+    networks:
+      - se-network
     depends_on:
-      - mongodb
+      mongodb:
+        condition: service_healthy
     environment:
-      - MONGO_URL=mongodb://mongodb:27017
+      - MONGO_URL=mongodb://${MONGO_USER:-admin}:${MONGO_PASSWORD:-password123}@mongodb:27017/?authSource=admin
+    deploy:
+      resources:
+        limits:
+          cpus: "0.3"
+          memory: 256M
 
   frontend:
     build: ./frontend
-    container_name: sud-erp-frontend
+    container_name: se-frontend
     expose:
       - "80"
+    networks:
+      - se-network
     depends_on:
       - backend
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 128M
 
   gateway:
     image: nginx:1.27-alpine
-    container_name: sud-erp-gateway
+    container_name: se-gateway
     ports:
-      - "80:80"
+      - "81:80"
     volumes:
       - ./gateway/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - se-network
     depends_on:
       - frontend
       - backend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.1"
+          memory: 128M
+
+networks:
+  se-network:
+    name: se-network
+    driver: bridge
 
 volumes:
   mongo_data:
+    name: se-mongo-data
