@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react';
+import ThemeToggle from './ThemeToggle';
+import useTheme from '../hooks/useTheme';
 import { erpTools } from '../tools/erpTools';
 
 export default function ERPToolsShell() {
   const [activeToolId, setActiveToolId] = useState(erpTools[0]?.id);
+  const { isLightTheme, toggleTheme } = useTheme();
 
   const activeTool = useMemo(
     () => erpTools.find((tool) => tool.id === activeToolId) || erpTools[0],
@@ -23,8 +26,13 @@ export default function ERPToolsShell() {
     <main className="erp-shell">
       <aside className="tool-sidebar glass-panel" aria-label="ERP tools">
         <div className="tool-sidebar-header">
-          <p className="eyebrow">Sud ERP</p>
-          <h1>ERP Tools</h1>
+          <div className="tool-sidebar-title-row">
+            <div>
+              <p className="eyebrow">Sud ERP</p>
+              <h1>ERP Tools</h1>
+            </div>
+            <ThemeToggle isLightTheme={isLightTheme} onToggle={toggleTheme} />
+          </div>
           <p>Selectionne un outil metier a afficher.</p>
         </div>
 

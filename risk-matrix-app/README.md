@@ -43,3 +43,14 @@ Le serveur Vite proxy les appels `/api/*` vers `http://localhost:8000/*`.
 ```
 
 La navigation est generee automatiquement par `ERPToolsShell`.
+
+## Theme clair / sombre
+
+Le frontend propose un bouton de bascule de theme dans l'en-tete de `ERPToolsShell`.
+
+Implementation :
+
+- les couleurs sont centralisees dans les variables CSS de `frontend/src/index.css` ;
+- le theme courant est applique via `data-theme="dark"` ou `data-theme="light"` sur la balise `<html>` ;
+- le choix utilisateur est persiste dans `localStorage` avec la cle `sud-erp-theme` ;
+- l'export PNG reprend automatiquement la palette du theme actif.

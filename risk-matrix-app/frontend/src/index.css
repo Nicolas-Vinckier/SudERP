@@ -1,16 +1,80 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap");
 
 :root {
+  color-scheme: dark;
   --bg-color: #0f172a;
   --surface-color: rgba(30, 41, 59, 0.7);
+  --surface-strong-color: rgba(15, 23, 42, 0.92);
+  --surface-muted-color: rgba(15, 23, 42, 0.62);
   --border-color: rgba(255, 255, 255, 0.1);
+  --matrix-grid-color: rgba(255, 255, 255, 0.12);
   --text-primary: #f8fafc;
   --text-secondary: #cbd5e1;
+  --text-faint: rgba(203, 213, 225, 0.45);
   --primary-color: #3b82f6;
   --primary-hover: #2563eb;
   --danger-color: #ef4444;
   --success-color: #10b981;
+  --warning-color: #f59e0b;
   --glass-blur: 12px;
+  --body-gradient-primary: rgba(59, 130, 246, 0.15);
+  --body-gradient-secondary: rgba(16, 185, 129, 0.15);
+  --control-bg-color: rgba(15, 23, 42, 0.6);
+  --control-focus-ring: rgba(59, 130, 246, 0.2);
+  --nav-item-bg: rgba(15, 23, 42, 0.62);
+  --nav-item-active-bg: rgba(59, 130, 246, 0.18);
+  --nav-item-active-border: rgba(96, 165, 250, 0.55);
+  --matrix-wrapper-bg: rgba(15, 23, 42, 0.55);
+  --risk-card-bg: rgba(15, 23, 42, 0.82);
+  --risk-card-border: rgba(255, 255, 255, 0.14);
+  --scrollbar-thumb-color: rgba(255, 255, 255, 0.2);
+  --panel-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --card-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+  --button-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+  --button-hover-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+  --heading-gradient-start: #60a5fa;
+  --heading-gradient-end: #a78bfa;
+  --risk-cell-low-bg: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.06));
+  --risk-cell-medium-bg: linear-gradient(135deg, rgba(245, 158, 11, 0.24), rgba(245, 158, 11, 0.07));
+  --risk-cell-high-bg: linear-gradient(135deg, rgba(239, 68, 68, 0.28), rgba(239, 68, 68, 0.08));
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg-color: #f8fafc;
+  --surface-color: rgba(255, 255, 255, 0.86);
+  --surface-strong-color: rgba(241, 245, 249, 0.96);
+  --surface-muted-color: rgba(248, 250, 252, 0.9);
+  --border-color: rgba(15, 23, 42, 0.12);
+  --matrix-grid-color: rgba(15, 23, 42, 0.12);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-faint: rgba(71, 85, 105, 0.48);
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --danger-color: #dc2626;
+  --success-color: #059669;
+  --warning-color: #d97706;
+  --body-gradient-primary: rgba(37, 99, 235, 0.12);
+  --body-gradient-secondary: rgba(16, 185, 129, 0.1);
+  --control-bg-color: rgba(255, 255, 255, 0.92);
+  --control-focus-ring: rgba(37, 99, 235, 0.16);
+  --nav-item-bg: rgba(248, 250, 252, 0.92);
+  --nav-item-active-bg: rgba(37, 99, 235, 0.12);
+  --nav-item-active-border: rgba(37, 99, 235, 0.42);
+  --matrix-wrapper-bg: rgba(255, 255, 255, 0.78);
+  --risk-card-bg: rgba(255, 255, 255, 0.94);
+  --risk-card-border: rgba(15, 23, 42, 0.14);
+  --scrollbar-thumb-color: rgba(71, 85, 105, 0.28);
+  --panel-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.18);
+  --card-shadow: 0 10px 20px rgba(15, 23, 42, 0.1);
+  --button-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.24);
+  --button-hover-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.28);
+  --heading-gradient-start: #1d4ed8;
+  --heading-gradient-end: #7c3aed;
+  --risk-cell-low-bg: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(16, 185, 129, 0.05));
+  --risk-cell-medium-bg: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.06));
+  --risk-cell-high-bg: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.06));
 }
 
 * {
@@ -23,8 +87,8 @@ body {
   font-family: "Inter", sans-serif;
   background: var(--bg-color);
   background-image:
-    radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(16, 185, 129, 0.15) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, var(--body-gradient-primary) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, var(--body-gradient-secondary) 0px, transparent 50%);
   color: var(--text-primary);
   min-height: 100vh;
   display: flex;
@@ -67,6 +131,67 @@ body {
   line-height: 1.45;
 }
 
+.tool-sidebar-title-row {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.theme-toggle {
+  align-items: center;
+  background: var(--surface-muted-color);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  gap: 0.55rem;
+  padding: 0.55rem 0.75rem;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.theme-toggle:hover {
+  border-color: var(--nav-item-active-border);
+  background: var(--nav-item-active-bg);
+}
+
+.theme-toggle:focus-visible {
+  outline: 2px solid var(--primary-color);
+  outline-offset: 3px;
+}
+
+.theme-toggle-track {
+  background: var(--control-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  display: inline-block;
+  height: 1.2rem;
+  position: relative;
+  width: 2.2rem;
+}
+
+.theme-toggle-knob {
+  background: var(--primary-color);
+  border-radius: 999px;
+  height: 0.78rem;
+  left: 0.2rem;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: transform 0.25s ease;
+  width: 0.78rem;
+}
+
+:root[data-theme='light'] .theme-toggle-knob {
+  transform: translate(1rem, -50%);
+}
+
 .tool-nav {
   display: flex;
   flex-direction: row;
@@ -74,7 +199,7 @@ body {
 }
 
 .tool-nav-item {
-  background: rgba(15, 23, 42, 0.62);
+  background: var(--nav-item-bg);
   border: 1px solid var(--border-color);
   border-radius: 1rem;
   color: var(--text-primary);
@@ -87,8 +212,8 @@ body {
 
 .tool-nav-item:hover,
 .tool-nav-item-active {
-  background: rgba(59, 130, 246, 0.18);
-  border-color: rgba(96, 165, 250, 0.55);
+  background: var(--nav-item-active-bg);
+  border-color: var(--nav-item-active-border);
 }
 
 .tool-nav-item span {
@@ -125,6 +250,10 @@ body {
     overflow-x: auto;
   }
 
+  .tool-sidebar-title-row {
+    align-items: center;
+  }
+
   .tool-nav {
     flex-direction: row;
   }
@@ -140,6 +269,16 @@ body {
 }
 
 @media (max-width: 640px) {
+  .tool-sidebar-title-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .theme-toggle {
+    justify-content: space-between;
+    width: 100%;
+  }
+
   .tool-nav {
     flex-direction: column;
   }
@@ -156,7 +295,7 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 1.5rem;
   padding: 2rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: var(--panel-shadow);
   overflow-y: auto;
 }
 
@@ -169,7 +308,7 @@ body {
 }
 
 .glass-panel::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--scrollbar-thumb-color);
   border-radius: 4px;
 }
 
@@ -177,7 +316,7 @@ h2 {
   font-size: 1.5rem;
   font-weight: 600;
   margin-bottom: 1.5rem;
-  background: linear-gradient(to right, #60a5fa, #a78bfa);
+  background: linear-gradient(to right, var(--heading-gradient-start), var(--heading-gradient-end));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -199,7 +338,7 @@ input,
 select,
 textarea {
   width: 100%;
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--control-bg-color);
   border: 1px solid var(--border-color);
   color: var(--text-primary);
   border-radius: 0.75rem;
@@ -214,7 +353,7 @@ select:focus,
 textarea:focus {
   outline: none;
   border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 3px var(--control-focus-ring);
 }
 
 textarea {
@@ -233,13 +372,13 @@ textarea {
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+  box-shadow: var(--button-shadow);
 }
 
 .btn:hover {
   background: var(--primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+  box-shadow: var(--button-hover-shadow);
 }
 
 .btn:active {
@@ -287,7 +426,7 @@ textarea {
 }
 
 .risk-summary span {
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--control-bg-color);
   border: 1px solid var(--border-color);
   border-radius: 0.875rem;
   color: var(--text-secondary);
@@ -315,7 +454,7 @@ textarea {
   overflow: auto;
   border: 1px solid var(--border-color);
   border-radius: 1rem;
-  background: rgba(15, 23, 42, 0.55);
+  background: var(--matrix-wrapper-bg);
 }
 
 .risk-matrix-table {
@@ -337,14 +476,14 @@ textarea {
 
 .risk-matrix-table th,
 .risk-matrix-table td {
-  border-right: 1px solid rgba(255, 255, 255, 0.12);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  border-right: 1px solid var(--matrix-grid-color);
+  border-bottom: 1px solid var(--matrix-grid-color);
   vertical-align: top;
 }
 
 .risk-matrix-table thead th,
 .risk-matrix-table tbody th {
-  background: rgba(15, 23, 42, 0.92);
+  background: var(--surface-strong-color);
   color: var(--text-primary);
   font-size: 0.9rem;
   font-weight: 700;
@@ -384,33 +523,21 @@ textarea {
 }
 
 .risk-cell-low {
-  background: linear-gradient(
-    135deg,
-    rgba(16, 185, 129, 0.2),
-    rgba(16, 185, 129, 0.06)
-  );
+  background: var(--risk-cell-low-bg);
 }
 
 .risk-cell-medium {
-  background: linear-gradient(
-    135deg,
-    rgba(245, 158, 11, 0.24),
-    rgba(245, 158, 11, 0.07)
-  );
+  background: var(--risk-cell-medium-bg);
 }
 
 .risk-cell-high {
-  background: linear-gradient(
-    135deg,
-    rgba(239, 68, 68, 0.28),
-    rgba(239, 68, 68, 0.08)
-  );
+  background: var(--risk-cell-high-bg);
 }
 
 .cell-score {
   align-items: center;
-  background: rgba(15, 23, 42, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: var(--surface-muted-color);
+  border: 1px solid var(--matrix-grid-color);
   border-radius: 999px;
   color: var(--text-primary);
   display: inline-flex;
@@ -441,13 +568,13 @@ textarea {
 }
 
 .cell-risks::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--scrollbar-thumb-color);
   border-radius: 999px;
 }
 
 .cell-empty {
   align-items: center;
-  color: rgba(203, 213, 225, 0.45);
+  color: var(--text-faint);
   display: flex;
   font-size: 1.1rem;
   height: 72px;
@@ -455,10 +582,10 @@ textarea {
 }
 
 .matrix-risk-chip {
-  background: rgba(15, 23, 42, 0.82);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: var(--risk-card-bg);
+  border: 1px solid var(--risk-card-border);
   border-radius: 0.7rem;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--card-shadow);
   padding: 0.55rem 2rem 0.55rem 0.65rem;
   position: relative;
 }
@@ -527,7 +654,7 @@ textarea {
 }
 
 .chip-delete-btn:hover {
-  background: rgba(239, 68, 68, 0.14);
+  background: color-mix(in srgb, var(--danger-color) 14%, transparent);
   color: var(--danger-color);
 }
 
