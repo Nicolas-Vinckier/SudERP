@@ -1,5 +1,7 @@
-import axios from 'axios';
+import { apiClient } from './apiClient';
 
-const API_URL = 'http://localhost:8000/risks/';
+export const getRisks = () => apiClient.get('/risks/');
 
-export const deleteRisk = (id) => axios.delete(`${API_URL}${id}`);
+export const createRisk = (risk) => apiClient.post('/risks/', risk);
+
+export const deleteRisk = (id) => apiClient.delete(`/risks/${id}`);

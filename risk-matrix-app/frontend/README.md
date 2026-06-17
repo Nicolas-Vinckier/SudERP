@@ -1,16 +1,24 @@
-# React + Vite
+# Frontend Sud ERP Tools
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend React/Vite de l'application Sud ERP Tools.
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+npm run lint
+npm run build
+```
 
-## React Compiler
+## API
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Par defaut, le frontend appelle l'API via `/api`.
 
-## Expanding the ESLint configuration
+- En Docker, la gateway Nginx route `/api` vers le backend.
+- En developpement local, Vite proxy `/api/*` vers `http://localhost:8000/*`.
+- La variable `VITE_API_BASE_URL` permet de surcharger le chemin API si necessaire.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Ajouter un ERP tool
+
+Les outils sont declares dans `src/tools/erpTools.js`. Ajouter un nouveau composant outil puis l'enregistrer dans ce tableau pour l'afficher dans la navigation.

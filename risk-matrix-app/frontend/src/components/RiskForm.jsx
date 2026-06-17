@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:8000/risks/';
+import { createRisk } from '../services/risksApi';
 
 export default function RiskForm({ onRiskAdded }) {
   const [formData, setFormData] = useState({
@@ -23,7 +21,7 @@ export default function RiskForm({ onRiskAdded }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(API_URL, formData);
+      await createRisk(formData);
       onRiskAdded();
       setFormData({
         description: '',
