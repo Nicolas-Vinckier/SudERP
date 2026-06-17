@@ -7,8 +7,47 @@ MONGO_DETAILS = os.getenv("MONGO_URL", "mongodb://localhost:27017")
 client = AsyncIOMotorClient(MONGO_DETAILS)
 database = client.risk_matrix_db
 risk_collection = database.get_collection("risks")
+budget_project_collection = database.get_collection("budget_projects")
+budget_employee_collection = database.get_collection("budget_employees")
+budget_expense_collection = database.get_collection("budget_expenses")
+settings_collection = database.get_collection("settings")
 
-# Helper to format data from DB
+DEFAULT_BUDGET_SETTINGS = {
+    "_id": "global_budget",
+    "available_budget": 500000,
+    "annual_revenue": 2500000,
+    "current_annual_costs": 0,
+    "cash_reserve": 0,
+    "forecast_monthly_revenue": 0,
+    "forecast_monthly_costs": 0,
+    "forecast_target_date": "",
+    "safety_margin_percent": 15,
+    "minimum_cash_buffer": 0,
+    "max_project_cost_revenue_ratio": 8,
+    "monthly_revenue_growth_percent": 0,
+    "monthly_cost_growth_percent": 0,
+}
+
+
+def settings_helper(settings) -> dict:
+    return {
+        "id": str(settings["_id"]),
+        "available_budget": settings.get("available_budget", DEFAULT_BUDGET_SETTINGS["available_budget"]),
+        "annual_revenue": settings.get("annual_revenue", DEFAULT_BUDGET_SETTINGS["annual_revenue"]),
+        "current_annual_costs": settings.get("current_annual_costs", DEFAULT_BUDGET_SETTINGS["current_annual_costs"]),
+        "cash_reserve": settings.get("cash_reserve", DEFAULT_BUDGET_SETTINGS["cash_reserve"]),
+        "forecast_monthly_revenue": settings.get("forecast_monthly_revenue", DEFAULT_BUDGET_SETTINGS["forecast_monthly_revenue"]),
+        "forecast_monthly_costs": settings.get("forecast_monthly_costs", DEFAULT_BUDGET_SETTINGS["forecast_monthly_costs"]),
+        "forecast_target_date": settings.get("forecast_target_date", DEFAULT_BUDGET_SETTINGS["forecast_target_date"]),
+        "safety_margin_percent": settings.get("safety_margin_percent", DEFAULT_BUDGET_SETTINGS["safety_margin_percent"]),
+        "minimum_cash_buffer": settings.get("minimum_cash_buffer", DEFAULT_BUDGET_SETTINGS["minimum_cash_buffer"]),
+        "max_project_cost_revenue_ratio": settings.get("max_project_cost_revenue_ratio", DEFAULT_BUDGET_SETTINGS["max_project_cost_revenue_ratio"]),
+        "monthly_revenue_growth_percent": settings.get("monthly_revenue_growth_percent", DEFAULT_BUDGET_SETTINGS["monthly_revenue_growth_percent"]),
+        "monthly_cost_growth_percent": settings.get("monthly_cost_growth_percent", DEFAULT_BUDGET_SETTINGS["monthly_cost_growth_percent"]),
+    }
+
+
+# Helper to format risk data from DB
 def risk_helper(risk) -> dict:
     return {
         "id": str(risk["_id"]),
@@ -17,4 +56,64 @@ def risk_helper(risk) -> dict:
         "impact": risk["impact"],
         "cia_pillar": risk["cia_pillar"],
         "mitigation": risk["mitigation"],
+    }
+
+
+# Helper to format budget project data from DB
+def budget_project_helper(project) -> dict:
+    return {
+        "id": str(project["_id"]),
+        "name": project["name"],
+        "description": project["description"],
+        "category": project.get("category", "Infrastructure"),
+        "budget_type": project.get("budget_type", "CAPEX"),
+        "requested_budget": project.get("requested_budget", 0),
+        "capex_amount": project.get("capex_amount", 0),
+        "opex_amount_annual": project.get("opex_amount_annual", 0),
+        "hidden_costs": project.get("hidden_costs", 0),
+        "expected_gain_annual": project.get("expected_gain_annual", 0),
+        "roi_horizon_years": project.get("roi_horizon_years", 3),
+        "business_value": project.get("business_value", 1),
+        "risk_reduction": project.get("risk_reduction", 1),
+        "roi_score": project.get("roi_score", 1),
+        "complexity_score": project.get("complexity_score", 1),
+        "is_mandatory": project.get("is_mandatory", False),
+        "decision": project.get("decision", "a_arbitrer"),
+        "justification": project.get("justification", ""),
+        "accepted_risk": project.get("accepted_risk", ""),
+    }
+
+
+def budget_employee_helper(employee) -> dict:
+    return {
+        "id": str(employee["_id"]),
+        "full_name": employee["full_name"],
+        "role": employee.get("role", "Equipe IT"),
+        "department": employee.get("department", "DSI"),
+        "weekly_hours": employee.get("weekly_hours", 35),
+        "hourly_rate": employee.get("hourly_rate", 0),
+        "workload_rate": employee.get("workload_rate", 1),
+        "employer_charge_rate": employee.get("employer_charge_rate", 0.45),
+        "annual_bonus": employee.get("annual_bonus", 0),
+        "project_allocation_rate": employee.get("project_allocation_rate", 1),
+        "start_date": employee.get("start_date", ""),
+        "end_date": employee.get("end_date", ""),
+        "notes": employee.get("notes", ""),
+    }
+
+
+def budget_expense_helper(expense) -> dict:
+    return {
+        "id": str(expense["_id"]),
+        "name": expense["name"],
+        "expense_type": expense.get("expense_type", "Logiciel"),
+        "billing_frequency": expense.get("billing_frequency", "monthly"),
+        "unit_cost": expense.get("unit_cost", 0),
+        "quantity": expense.get("quantity", 1),
+        "start_date": expense.get("start_date", ""),
+        "end_date": expense.get("end_date", ""),
+        "owner": expense.get("owner", ""),
+        "vendor": expense.get("vendor", ""),
+        "is_critical": expense.get("is_critical", False),
+        "notes": expense.get("notes", ""),
     }
