@@ -1,7 +1,7 @@
 services:
   mongodb:
     image: mongo:7.0
-    container_name: risk_matrix_mongo
+    container_name: mongo
     ports:
       - "27017:27017"
     volumes:
@@ -9,7 +9,7 @@ services:
 
   backend:
     build: ./backend
-    container_name: risk_matrix_backend
+    container_name: backend
     ports:
       - "8000:8000"
     depends_on:
@@ -19,7 +19,7 @@ services:
 
   frontend:
     build: ./frontend
-    container_name: risk_matrix_frontend
+    container_name: frontend
     ports:
       - "3000:80"
     depends_on:
