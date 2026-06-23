@@ -1894,3 +1894,33 @@ textarea {
     grid-template-columns: 1fr;
   }
 }
+
+.roadmap-error-message {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.26);
+  border-radius: 0.9rem;
+  color: var(--danger-color);
+  font-weight: 800;
+  margin: 0;
+  padding: 0.85rem 1rem;
+}
+
+.roadmap-cadrage-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+}
+
+.roadmap-cadrage-heading .small-btn:disabled,
+.form-actions .btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+}
+
+@media (max-width: 760px) {
+  .roadmap-cadrage-heading {
+    flex-direction: column;
+  }
+}

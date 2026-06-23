@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from database import (
     DEFAULT_BUDGET_SETTINGS,
+    DEFAULT_ROADMAP_CONTEXT,
     budget_employee_collection,
     budget_employee_helper,
     budget_expense_collection,
@@ -13,6 +14,10 @@ from database import (
     budget_project_helper,
     risk_collection,
     risk_helper,
+    roadmap_context_collection,
+    roadmap_context_helper,
+    roadmap_project_collection,
+    roadmap_project_helper,
     settings_collection,
     settings_helper,
 )
@@ -27,6 +32,9 @@ from models import (
     UpdateRiskModel,
     BudgetSettingsSchema,
     UpdateBudgetSettingsModel,
+    RoadmapProjectSchema,
+    UpdateRoadmapContextModel,
+    UpdateRoadmapProjectModel,
 )
 
 app = FastAPI(title="Sud ERP Tools API")
@@ -250,6 +258,75 @@ async def delete_budget_expense(id: str):
     if delete_result.deleted_count == 1:
         return {"status": "Successfully deleted budget expense"}
     raise HTTPException(status_code=404, detail="Budget expense not found")
+
+
+@app.get("/strategic-roadmap/context")
+async def get_roadmap_context():
+    context = await roadmap_context_collection.find_one({"_id": "global_roadmap"})
+    if not context:
+        await roadmap_context_collection.insert_one(DEFAULT_ROADMAP_CONTEXT)
+        return roadmap_context_helper(DEFAULT_ROADMAP_CONTEXT)
+    return roadmap_context_helper(context)
+
+
+@app.put("/strategic-roadmap/context")
+async def update_roadmap_context(req: UpdateRoadmapContextModel):
+    req_dict = {k: v for k, v in req.model_dump().items() if v is not None}
+    await roadmap_context_collection.update_one(
+        {"_id": "global_roadmap"}, {"$set": req_dict}, upsert=True
+    )
+    context = await roadmap_context_collection.find_one({"_id": "global_roadmap"})
+    return roadmap_context_helper(context)
+
+
+@app.post("/strategic-roadmap/projects/")
+async def add_roadmap_project(project: RoadmapProjectSchema):
+    project_dict = project.model_dump()
+    new_project = await roadmap_project_collection.insert_one(project_dict)
+    created_project = await roadmap_project_collection.find_one({"_id": new_project.inserted_id})
+    return roadmap_project_helper(created_project)
+
+
+@app.get("/strategic-roadmap/projects/")
+async def get_roadmap_projects():
+    projects = []
+    async for project in roadmap_project_collection.find():
+        projects.append(roadmap_project_helper(project))
+    return projects
+
+
+@app.get("/strategic-roadmap/projects/{id}")
+async def get_roadmap_project(id: str):
+    project_id = parse_object_id(id)
+    project = await roadmap_project_collection.find_one({"_id": project_id})
+    if project:
+        return roadmap_project_helper(project)
+    raise HTTPException(status_code=404, detail="Roadmap project not found")
+
+
+@app.put("/strategic-roadmap/projects/{id}")
+async def update_roadmap_project(id: str, req: UpdateRoadmapProjectModel):
+    project_id = parse_object_id(id)
+    req_dict = {k: v for k, v in req.model_dump().items() if v is not None}
+    update_result = await roadmap_project_collection.update_one(
+        {"_id": project_id}, {"$set": req_dict}
+    )
+    if update_result.modified_count == 1:
+        updated_project = await roadmap_project_collection.find_one({"_id": project_id})
+        return roadmap_project_helper(updated_project)
+    existing_project = await roadmap_project_collection.find_one({"_id": project_id})
+    if existing_project:
+        return roadmap_project_helper(existing_project)
+    raise HTTPException(status_code=404, detail="Roadmap project not found")
+
+
+@app.delete("/strategic-roadmap/projects/{id}")
+async def delete_roadmap_project(id: str):
+    project_id = parse_object_id(id)
+    delete_result = await roadmap_project_collection.delete_one({"_id": project_id})
+    if delete_result.deleted_count == 1:
+        return {"status": "Successfully deleted roadmap project"}
+    raise HTTPException(status_code=404, detail="Roadmap project not found")
 
 
 @app.get("/settings/budget")

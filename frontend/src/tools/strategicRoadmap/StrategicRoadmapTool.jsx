@@ -1,4 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createRoadmapProject,
+  deleteRoadmapProject,
+  getRoadmapContext,
+  getRoadmapProjects,
+  updateRoadmapContext,
+  updateRoadmapProject
+} from '../../services/strategicRoadmapApi';
 
 const PHASES = [
   { id: 'year-1', label: 'Annee 1', theme: 'Securiser', guidance: 'Quick wins, cybersecurite, sauvegardes, documentation.' },
@@ -16,6 +24,8 @@ const EXPORT_SECTIONS = [
 ];
 
 const INITIAL_EXPORT_SELECTION = EXPORT_SECTIONS.reduce((selection, section) => ({ ...selection, [section.id]: true }), {});
+
+const INITIAL_CONTEXT = { currentState: '', targetVision: '', businessObjectives: '', governance: '' };
 
 const INITIAL_PROJECT = {
   name: '', scope: '', benefit: '', budget: '', value: 3, risk: 3, cost: 3, complexity: 3, phase: 'year-1', owner: '', kpi: ''
@@ -248,12 +258,18 @@ function downloadFile(filename, content) {
 }
 
 export default function StrategicRoadmapTool() {
-  const [context, setContext] = useState({ currentState: '', targetVision: '', businessObjectives: '', governance: '' });
+  const [context, setContext] = useState(INITIAL_CONTEXT);
   const [projectDraft, setProjectDraft] = useState(INITIAL_PROJECT);
   const [projects, setProjects] = useState([]);
-  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingProjectId, setEditingProjectId] = useState(null);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportSelection, setExportSelection] = useState(INITIAL_EXPORT_SELECTION);
+  const [isLoadingRoadmap, setIsLoadingRoadmap] = useState(true);
+  const [isSavingContext, setIsSavingContext] = useState(false);
+  const [isSavingProject, setIsSavingProject] = useState(false);
+  const [roadmapError, setRoadmapError] = useState('');
+  const hasLoadedRoadmap = useRef(false);
+  const contextAutosaveTimer = useRef(null);
 
   const sortedProjects = useMemo(() => [...projects].sort((a, b) => getPriorityScore(b) - getPriorityScore(a)), [projects]);
   const roadmapByPhase = useMemo(() => PHASES.map((phase) => ({ ...phase, projects: sortedProjects.filter((project) => project.phase === phase.id) })), [sortedProjects]);
@@ -264,9 +280,70 @@ export default function StrategicRoadmapTool() {
   }), [projects]);
   const selectedExportCount = useMemo(() => EXPORT_SECTIONS.filter((section) => exportSelection[section.id]).length, [exportSelection]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    async function loadRoadmap() {
+      setIsLoadingRoadmap(true);
+      setRoadmapError('');
+      try {
+        const [storedContext, storedProjects] = await Promise.all([getRoadmapContext(), getRoadmapProjects()]);
+        if (!isMounted) return;
+        setContext(storedContext);
+        setProjects(storedProjects);
+        hasLoadedRoadmap.current = true;
+      } catch {
+        if (isMounted) setRoadmapError('Impossible de charger les donnees du schema directeur depuis la base.');
+      } finally {
+        if (isMounted) setIsLoadingRoadmap(false);
+      }
+    }
+
+    loadRoadmap();
+
+    return () => {
+      isMounted = false;
+      if (contextAutosaveTimer.current) window.clearTimeout(contextAutosaveTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedRoadmap.current) return undefined;
+    if (contextAutosaveTimer.current) window.clearTimeout(contextAutosaveTimer.current);
+
+    contextAutosaveTimer.current = window.setTimeout(async () => {
+      setIsSavingContext(true);
+      setRoadmapError('');
+      try {
+        await updateRoadmapContext(context);
+      } catch {
+        setRoadmapError('La sauvegarde automatique du cadrage a echoue.');
+      } finally {
+        setIsSavingContext(false);
+      }
+    }, 700);
+
+    return () => {
+      if (contextAutosaveTimer.current) window.clearTimeout(contextAutosaveTimer.current);
+    };
+  }, [context]);
+
+  const saveContextNow = async () => {
+    if (contextAutosaveTimer.current) window.clearTimeout(contextAutosaveTimer.current);
+    setIsSavingContext(true);
+    setRoadmapError('');
+    try {
+      await updateRoadmapContext(context);
+    } catch {
+      setRoadmapError('Impossible de sauvegarder le cadrage.');
+    } finally {
+      setIsSavingContext(false);
+    }
+  };
+
   const updateContext = (field, value) => setContext((current) => ({ ...current, [field]: value }));
   const updateDraft = (field, value) => setProjectDraft((current) => ({ ...current, [field]: value }));
-  const resetDraft = () => { setProjectDraft(INITIAL_PROJECT); setEditingIndex(null); };
+  const resetDraft = () => { setProjectDraft(INITIAL_PROJECT); setEditingProjectId(null); };
   const updateExportSelection = (sectionId) => {
     setExportSelection((current) => ({ ...current, [sectionId]: !current[sectionId] }));
   };
@@ -290,7 +367,7 @@ export default function StrategicRoadmapTool() {
     previewWindow.setTimeout(() => previewWindow.print(), 350);
   };
 
-  const saveProject = (event) => {
+  const saveProject = async (event) => {
     event.preventDefault();
     const normalizedProject = {
       ...projectDraft,
@@ -306,13 +383,45 @@ export default function StrategicRoadmapTool() {
       complexity: Number(projectDraft.complexity)
     };
     if (!normalizedProject.name) return;
-    if (editingIndex === null) setProjects((current) => [...current, normalizedProject]);
-    else setProjects((current) => current.map((project, index) => (index === editingIndex ? normalizedProject : project)));
-    resetDraft();
+
+    setIsSavingProject(true);
+    setRoadmapError('');
+    try {
+      if (editingProjectId === null) {
+        const createdProject = await createRoadmapProject(normalizedProject);
+        setProjects((current) => [...current, createdProject]);
+      } else {
+        const updatedProject = await updateRoadmapProject(editingProjectId, normalizedProject);
+        setProjects((current) => current.map((project) => (project.id === editingProjectId ? updatedProject : project)));
+      }
+      resetDraft();
+    } catch {
+      setRoadmapError('Impossible de sauvegarder le projet dans la base.');
+    } finally {
+      setIsSavingProject(false);
+    }
   };
 
-  const editProject = (project) => { setProjectDraft(project); setEditingIndex(projects.indexOf(project)); };
-  const deleteProject = (project) => { setProjects((current) => current.filter((item) => item !== project)); resetDraft(); };
+  const editProject = (project) => { setProjectDraft(project); setEditingProjectId(project.id ?? null); };
+  const deleteProject = async (project) => {
+    if (!project.id) {
+      setProjects((current) => current.filter((item) => item !== project));
+      resetDraft();
+      return;
+    }
+
+    setIsSavingProject(true);
+    setRoadmapError('');
+    try {
+      await deleteRoadmapProject(project.id);
+      setProjects((current) => current.filter((item) => item.id !== project.id));
+      resetDraft();
+    } catch {
+      setRoadmapError('Impossible de supprimer le projet en base.');
+    } finally {
+      setIsSavingProject(false);
+    }
+  };
 
   return (
     <div className="strategic-roadmap-tool">
@@ -323,10 +432,12 @@ export default function StrategicRoadmapTool() {
           <p>Construis une trajectoire SI en reliant diagnostic, vision cible, priorisation valeur / effort et planning 3 ans.</p>
         </div>
         <div className="budget-actions-panel roadmap-toolbar-actions">
-          <small>Le calcul de priorite combine valeur metier, risque couvert, cout et complexite.</small>
+          <small>{isLoadingRoadmap ? 'Chargement des donnees sauvegardees...' : isSavingContext || isSavingProject ? 'Sauvegarde en cours...' : 'Donnees sauvegardees en base MongoDB.'}</small>
           <button className="btn export-btn" type="button" onClick={() => setIsExportModalOpen(true)}>Exporter</button>
         </div>
       </section>
+
+      {roadmapError && <p className="roadmap-error-message">{roadmapError}</p>}
 
       <section className="budget-summary">
         <article className="summary-positive"><span>Projets</span><strong>{projects.length}</strong></article>
@@ -337,17 +448,17 @@ export default function StrategicRoadmapTool() {
 
       <section className="roadmap-layout">
         <div className="glass-panel roadmap-form-panel">
-          <div className="section-heading"><h2>Cadrage</h2><p>Formalise les trois questions du schema directeur : etat actuel, cible et trajectoire.</p></div>
+          <div className="section-heading roadmap-cadrage-heading"><div><h2>Cadrage</h2><p>Formalise les trois questions du schema directeur : etat actuel, cible et trajectoire.</p></div><button className="small-btn" type="button" onClick={saveContextNow} disabled={isSavingContext}>{isSavingContext ? 'Sauvegarde...' : 'Enregistrer'}</button></div>
           <div className="form-grid">
-            <div className="form-group"><label htmlFor="currentState">Etat actuel du SI</label><textarea id="currentState" value={context.currentState} onChange={(event) => updateContext('currentState', event.target.value)} placeholder="Applications, infrastructure, processus, dette technique, risques..." /></div>
-            <div className="form-group"><label htmlFor="targetVision">Vision cible 3 ans</label><textarea id="targetVision" value={context.targetVision} onChange={(event) => updateContext('targetVision', event.target.value)} placeholder="Capacites attendues, architecture cible, niveaux de service, securite..." /></div>
-            <div className="form-group"><label htmlFor="businessObjectives">Objectifs metier</label><textarea id="businessObjectives" value={context.businessObjectives} onChange={(event) => updateContext('businessObjectives', event.target.value)} placeholder="Productivite, delais, qualite, experience utilisateur, conformite..." /></div>
-            <div className="form-group"><label htmlFor="governance">Pilotage et gouvernance</label><textarea id="governance" value={context.governance} onChange={(event) => updateContext('governance', event.target.value)} placeholder="Comite de pilotage, KPI, frequence de revue, sponsors..." /></div>
+            <div className="form-group"><label htmlFor="currentState">Etat actuel du SI</label><textarea id="currentState" value={context.currentState} onChange={(event) => updateContext('currentState', event.target.value)} onBlur={saveContextNow} placeholder="Applications, infrastructure, processus, dette technique, risques..." /></div>
+            <div className="form-group"><label htmlFor="targetVision">Vision cible 3 ans</label><textarea id="targetVision" value={context.targetVision} onChange={(event) => updateContext('targetVision', event.target.value)} onBlur={saveContextNow} placeholder="Capacites attendues, architecture cible, niveaux de service, securite..." /></div>
+            <div className="form-group"><label htmlFor="businessObjectives">Objectifs metier</label><textarea id="businessObjectives" value={context.businessObjectives} onChange={(event) => updateContext('businessObjectives', event.target.value)} onBlur={saveContextNow} placeholder="Productivite, delais, qualite, experience utilisateur, conformite..." /></div>
+            <div className="form-group"><label htmlFor="governance">Pilotage et gouvernance</label><textarea id="governance" value={context.governance} onChange={(event) => updateContext('governance', event.target.value)} onBlur={saveContextNow} placeholder="Comite de pilotage, KPI, frequence de revue, sponsors..." /></div>
           </div>
         </div>
 
         <form className="glass-panel roadmap-project-form" onSubmit={saveProject}>
-          <div className="section-heading"><h2>{editingIndex === null ? 'Ajouter un projet' : 'Modifier le projet'}</h2><p>Renseigne les criteres d arbitrage pour alimenter la matrice et la roadmap.</p></div>
+          <div className="section-heading"><h2>{editingProjectId === null ? 'Ajouter un projet' : 'Modifier le projet'}</h2><p>Renseigne les criteres d arbitrage pour alimenter la matrice et la roadmap.</p></div>
           <div className="form-grid two-columns">
             <div className="form-group"><label htmlFor="projectName">Nom du projet</label><input id="projectName" value={projectDraft.name} onChange={(event) => updateDraft('name', event.target.value)} placeholder="Ex. MFA, PRA, refonte ERP" required /></div>
             <div className="form-group"><label htmlFor="projectOwner">Portage</label><input id="projectOwner" value={projectDraft.owner} onChange={(event) => updateDraft('owner', event.target.value)} placeholder="DSI, RSSI, metier, finance..." /></div>
@@ -371,7 +482,7 @@ export default function StrategicRoadmapTool() {
             </div>
           </fieldset>
           <div className="calculation-preview"><span>Quadrant: <strong>{getQuadrant(projectDraft)}</strong></span><span>Effort: <strong>{getEffort(projectDraft)}/5</strong></span><span>Score: <strong>{getPriorityScore(projectDraft)}</strong></span></div>
-          <div className="form-actions"><button className="btn" type="submit">{editingIndex === null ? 'Ajouter a la roadmap' : 'Enregistrer'}</button>{editingIndex !== null && <button className="btn secondary-btn" type="button" onClick={resetDraft}>Annuler</button>}</div>
+          <div className="form-actions"><button className="btn" type="submit" disabled={isSavingProject}>{isSavingProject ? 'Sauvegarde...' : editingProjectId === null ? 'Ajouter a la roadmap' : 'Enregistrer'}</button>{editingProjectId !== null && <button className="btn secondary-btn" type="button" onClick={resetDraft}>Annuler</button>}</div>
         </form>
       </section>
 
@@ -383,7 +494,7 @@ export default function StrategicRoadmapTool() {
               <div className="matrix-quadrant" key={quadrant}>
                 <strong>{quadrant}</strong>
                 <div className="quadrant-projects">
-                  {sortedProjects.filter((project) => getQuadrant(project) === quadrant).map((project) => <button key={`${project.name}-${project.phase}`} type="button" onClick={() => editProject(project)}>{project.name}<span>{getPriorityScore(project)}</span></button>)}
+                  {sortedProjects.filter((project) => getQuadrant(project) === quadrant).map((project) => <button key={project.id ?? `${project.name}-${project.phase}`} type="button" onClick={() => editProject(project)}>{project.name}<span>{getPriorityScore(project)}</span></button>)}
                 </div>
               </div>
             ))}
@@ -397,7 +508,7 @@ export default function StrategicRoadmapTool() {
                 <div className="timeline-marker">{index + 1}</div><span>{phase.label}</span><h3>{phase.theme}</h3><small>{phase.guidance}</small>
                 <div className="timeline-projects">
                   {phase.projects.length === 0 ? <p className="manager-empty">Aucun projet affecte.</p> : phase.projects.map((project) => (
-                    <div className="timeline-project-card" key={`${phase.id}-${project.name}`}>
+                    <div className="timeline-project-card" key={project.id ?? `${phase.id}-${project.name}`}>
                       <div><strong>{project.name}</strong><span>{project.budget.toLocaleString('fr-FR')} €</span></div>
                       <p>{project.benefit || project.scope || 'Benefice a preciser.'}</p>
                       <div className="table-actions"><button type="button" className="small-btn" onClick={() => editProject(project)}>Modifier</button><button type="button" className="small-btn danger-btn" onClick={() => deleteProject(project)}>Supprimer</button></div>
@@ -418,7 +529,7 @@ export default function StrategicRoadmapTool() {
             <thead><tr><th>Projet</th><th>Phase</th><th>Priorite</th><th>Budget</th><th>Valeur / Risque</th><th>Effort</th><th>KPI</th></tr></thead>
             <tbody>
               {sortedProjects.length === 0 ? <tr><td colSpan="7" className="empty-state">Ajoute un premier projet pour generer la synthese.</td></tr> : sortedProjects.map((project) => (
-                <tr key={`${project.name}-${project.phase}-${project.budget}`}>
+                <tr key={project.id ?? `${project.name}-${project.phase}-${project.budget}`}>
                   <td className="project-title-cell"><strong>{project.name}</strong><span>{project.scope || 'Perimetre a preciser.'}</span>{project.owner && <small>Portage: {project.owner}</small>}</td>
                   <td>{getPhase(project).label}</td><td><span className="score-pill decision-neutral">{getPriorityScore(project)}</span></td><td>{project.budget.toLocaleString('fr-FR')} €</td><td>{scoreLabels[project.value]} / {scoreLabels[project.risk]}</td><td>{getEffort(project)}/5</td><td>{project.kpi || 'A definir'}</td>
                 </tr>

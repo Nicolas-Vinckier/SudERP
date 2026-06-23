@@ -192,3 +192,45 @@ class UpdateBudgetSettingsModel(BaseModel):
     max_project_cost_revenue_ratio: Optional[float] = Field(None, ge=0, le=100)
     monthly_revenue_growth_percent: Optional[float] = Field(None, ge=-50, le=100)
     monthly_cost_growth_percent: Optional[float] = Field(None, ge=-50, le=100)
+
+
+class RoadmapContextSchema(BaseModel):
+    current_state: str = Field(default="")
+    target_vision: str = Field(default="")
+    business_objectives: str = Field(default="")
+    governance: str = Field(default="")
+
+
+class UpdateRoadmapContextModel(BaseModel):
+    current_state: Optional[str] = None
+    target_vision: Optional[str] = None
+    business_objectives: Optional[str] = None
+    governance: Optional[str] = None
+
+
+class RoadmapProjectSchema(BaseModel):
+    name: str = Field(..., min_length=1)
+    scope: str = Field(default="")
+    benefit: str = Field(default="")
+    budget: float = Field(default=0, ge=0)
+    value: int = Field(default=3, ge=1, le=5)
+    risk: int = Field(default=3, ge=1, le=5)
+    cost: int = Field(default=3, ge=1, le=5)
+    complexity: int = Field(default=3, ge=1, le=5)
+    phase: str = Field(default="year-1")
+    owner: str = Field(default="")
+    kpi: str = Field(default="")
+
+
+class UpdateRoadmapProjectModel(BaseModel):
+    name: Optional[str] = Field(None, min_length=1)
+    scope: Optional[str] = None
+    benefit: Optional[str] = None
+    budget: Optional[float] = Field(None, ge=0)
+    value: Optional[int] = Field(None, ge=1, le=5)
+    risk: Optional[int] = Field(None, ge=1, le=5)
+    cost: Optional[int] = Field(None, ge=1, le=5)
+    complexity: Optional[int] = Field(None, ge=1, le=5)
+    phase: Optional[str] = None
+    owner: Optional[str] = None
+    kpi: Optional[str] = None

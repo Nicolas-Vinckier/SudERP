@@ -11,6 +11,17 @@ budget_project_collection = database.get_collection("budget_projects")
 budget_employee_collection = database.get_collection("budget_employees")
 budget_expense_collection = database.get_collection("budget_expenses")
 settings_collection = database.get_collection("settings")
+roadmap_context_collection = database.get_collection("roadmap_context")
+roadmap_project_collection = database.get_collection("roadmap_projects")
+
+DEFAULT_ROADMAP_CONTEXT = {
+    "_id": "global_roadmap",
+    "current_state": "",
+    "target_vision": "",
+    "business_objectives": "",
+    "governance": "",
+}
+
 
 DEFAULT_BUDGET_SETTINGS = {
     "_id": "global_budget",
@@ -27,6 +38,33 @@ DEFAULT_BUDGET_SETTINGS = {
     "monthly_revenue_growth_percent": 0,
     "monthly_cost_growth_percent": 0,
 }
+
+
+def roadmap_context_helper(context) -> dict:
+    return {
+        "id": str(context["_id"]),
+        "current_state": context.get("current_state", DEFAULT_ROADMAP_CONTEXT["current_state"]),
+        "target_vision": context.get("target_vision", DEFAULT_ROADMAP_CONTEXT["target_vision"]),
+        "business_objectives": context.get("business_objectives", DEFAULT_ROADMAP_CONTEXT["business_objectives"]),
+        "governance": context.get("governance", DEFAULT_ROADMAP_CONTEXT["governance"]),
+    }
+
+
+def roadmap_project_helper(project) -> dict:
+    return {
+        "id": str(project["_id"]),
+        "name": project["name"],
+        "scope": project.get("scope", ""),
+        "benefit": project.get("benefit", ""),
+        "budget": project.get("budget", 0),
+        "value": project.get("value", 3),
+        "risk": project.get("risk", 3),
+        "cost": project.get("cost", 3),
+        "complexity": project.get("complexity", 3),
+        "phase": project.get("phase", "year-1"),
+        "owner": project.get("owner", ""),
+        "kpi": project.get("kpi", ""),
+    }
 
 
 def settings_helper(settings) -> dict:
