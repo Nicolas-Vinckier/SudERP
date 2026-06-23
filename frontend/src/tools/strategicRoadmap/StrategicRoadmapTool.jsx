@@ -76,7 +76,7 @@ function formatCurrency(value) {
   return `${Number(value || 0).toLocaleString('fr-FR')} EUR`;
 }
 
-function buildReportHtml({ context, sortedProjects, roadmapByPhase, summary, exportSelection }) {
+function buildReportHtml({ context, sortedProjects, roadmapByPhase, summary, exportSelection, autoPrint = false }) {
   const reportDate = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'long' }).format(new Date());
   const selectedSections = EXPORT_SECTIONS.filter((section) => exportSelection[section.id]);
   const selectedLabels = selectedSections.map((section) => section.label).join(' - ');
@@ -219,7 +219,9 @@ function buildReportHtml({ context, sortedProjects, roadmapByPhase, summary, exp
     .export-table tr:nth-child(even) td { background: #f8fafc; }
     .quadrant-chip { background: #eef2ff; border: 1px solid #c7d2fe; border-radius: 999px; color: #3730a3; display: inline-flex; font-size: 12px; font-weight: 900; padding: 6px 10px; }
     .muted { color: #94a3b8; font-style: italic; }
-    @media print { body { background: white; } .report { padding: 0; } .hero, .report-section { box-shadow: none; } }
+    .print-helper { background: rgba(255,255,255,.96); border: 1px solid #e2e8f0; border-radius: 999px; bottom: 22px; box-shadow: 0 14px 34px rgba(15, 23, 42, .18); display: flex; gap: 10px; padding: 10px; position: fixed; right: 22px; z-index: 20; }
+    .print-helper button { background: #2563eb; border: 0; border-radius: 999px; color: #fff; cursor: pointer; font-weight: 900; padding: 10px 16px; }
+    @media print { body { background: white; } .report { padding: 0; } .hero, .report-section { box-shadow: none; } .print-helper { display: none; } }
     @media (max-width: 900px) { .hero-grid, .framing-grid, .export-matrix, .export-timeline { grid-template-columns: 1fr; } .export-timeline:before { bottom: 0; height: auto; left: 23px; right: auto; top: 20px; width: 7px; } .export-timeline-marker { left: 24px; top: -45px; } }
   </style>
 </head>
@@ -241,6 +243,15 @@ function buildReportHtml({ context, sortedProjects, roadmapByPhase, summary, exp
     ${timelineSection}
     ${summarySection}
   </main>
+  <div class="print-helper"><button type="button" onclick="window.print()">Exporter en PDF</button></div>
+  ${autoPrint ? `<script>
+    window.addEventListener('load', function () {
+      window.setTimeout(function () {
+        window.focus();
+        window.print();
+      }, 500);
+    });
+  </script>` : ''}
 </body>
 </html>`;
 }
@@ -348,7 +359,7 @@ export default function StrategicRoadmapTool() {
     setExportSelection((current) => ({ ...current, [sectionId]: !current[sectionId] }));
   };
 
-  const getReportHtml = () => buildReportHtml({ context, sortedProjects, roadmapByPhase, summary, exportSelection });
+  const getReportHtml = (options = {}) => buildReportHtml({ context, sortedProjects, roadmapByPhase, summary, exportSelection, ...options });
 
   const exportHtmlReport = () => {
     if (selectedExportCount === 0) return;
@@ -358,13 +369,20 @@ export default function StrategicRoadmapTool() {
 
   const previewPrintableReport = () => {
     if (selectedExportCount === 0) return;
-    const previewWindow = window.open('', '_blank', 'noopener,noreferrer,width=1200,height=900');
-    if (!previewWindow) return;
-    previewWindow.document.open();
-    previewWindow.document.write(getReportHtml());
-    previewWindow.document.close();
-    previewWindow.focus();
-    previewWindow.setTimeout(() => previewWindow.print(), 350);
+
+    const html = getReportHtml({ autoPrint: true });
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const previewWindow = window.open(url, '_blank', 'width=1200,height=900');
+
+    if (!previewWindow) {
+      URL.revokeObjectURL(url);
+      setRoadmapError('Le navigateur a bloque l ouverture de l apercu PDF. Autorise les popups ou utilise l export HTML.');
+      return;
+    }
+
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    setIsExportModalOpen(false);
   };
 
   const saveProject = async (event) => {
@@ -567,7 +585,7 @@ export default function StrategicRoadmapTool() {
             </div>
             <div className="export-modal-actions">
               <button className="btn secondary-btn" type="button" onClick={() => setIsExportModalOpen(false)}>Annuler</button>
-              <button className="btn secondary-btn" type="button" onClick={previewPrintableReport} disabled={selectedExportCount === 0}>Apercu / PDF</button>
+              <button className="btn secondary-btn" type="button" onClick={previewPrintableReport} disabled={selectedExportCount === 0}>Apercu PDF</button>
               <button className="btn" type="button" onClick={exportHtmlReport} disabled={selectedExportCount === 0}>Exporter HTML</button>
             </div>
             {selectedExportCount === 0 && <p className="export-warning">Selectionne au moins une section pour lancer l export.</p>}
