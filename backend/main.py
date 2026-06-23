@@ -27,6 +27,7 @@ from models import (
     BudgetEmployeeSchema,
     BudgetExpenseSchema,
     BudgetProjectSchema,
+    KpiBulkCreateSchema,
     KpiIndicatorSchema,
     RiskSchema,
     UpdateBudgetEmployeeModel,
@@ -339,6 +340,23 @@ async def add_kpi_indicator(kpi: KpiIndicatorSchema):
     new_kpi = await kpi_collection.insert_one(kpi_dict)
     created_kpi = await kpi_collection.find_one({"_id": new_kpi.inserted_id})
     return kpi_helper(created_kpi)
+
+
+@app.post("/kpi-indicators/bulk")
+async def add_kpi_indicators_bulk(payload: KpiBulkCreateSchema):
+    if payload.replace_existing:
+        await kpi_collection.delete_many({})
+
+    kpi_docs = [kpi.model_dump() for kpi in payload.indicators]
+    if not kpi_docs:
+        return {"created_count": 0, "indicators": []}
+
+    result = await kpi_collection.insert_many(kpi_docs)
+    created_kpis = []
+    async for kpi in kpi_collection.find({"_id": {"$in": result.inserted_ids}}).sort("display_order", 1):
+        created_kpis.append(kpi_helper(kpi))
+
+    return {"created_count": len(created_kpis), "indicators": created_kpis}
 
 
 @app.get("/kpi-indicators/")

@@ -261,6 +261,14 @@ class KpiIndicatorSchema(BaseModel):
     display_order: int = Field(default=0)
 
 
+class KpiBulkCreateSchema(BaseModel):
+    replace_existing: bool = Field(
+        default=False,
+        description="When true, existing KPI indicators are deleted before inserting the new list.",
+    )
+    indicators: list[KpiIndicatorSchema] = Field(default_factory=list)
+
+
 class UpdateKpiIndicatorModel(BaseModel):
     name: Optional[str] = Field(None, min_length=1)
     family: Optional[str] = None
