@@ -1,6 +1,7 @@
 import BudgetArbitrageTool from './budgetArbitrage/BudgetArbitrageTool';
 import RiskMatrixTool from './riskMatrix/RiskMatrixTool';
 import StrategicRoadmapTool from './strategicRoadmap/StrategicRoadmapTool';
+import KpiPilotageTool from './kpiPilotage/KpiPilotageTool';
 
 export const erpTools = [
   {
@@ -23,5 +24,12 @@ export const erpTools = [
     shortTitle: 'Schema directeur',
     description: 'Vision cible, priorisation valeur / effort et trajectoire SI 3 ans.',
     component: StrategicRoadmapTool
+  },
+  {
+    id: 'kpi-pilotage',
+    title: 'KPI & Pilotage du SI',
+    shortTitle: 'KPI & Pilotage',
+    description: 'Dashboard DSI, SLA, MTTR, MTBF, disponibilite et plans d action.',
+    component: KpiPilotageTool
   }
 ];

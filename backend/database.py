@@ -13,6 +13,7 @@ budget_expense_collection = database.get_collection("budget_expenses")
 settings_collection = database.get_collection("settings")
 roadmap_context_collection = database.get_collection("roadmap_context")
 roadmap_project_collection = database.get_collection("roadmap_projects")
+kpi_collection = database.get_collection("kpi_indicators")
 
 DEFAULT_ROADMAP_CONTEXT = {
     "_id": "global_roadmap",
@@ -38,6 +39,34 @@ DEFAULT_BUDGET_SETTINGS = {
     "monthly_revenue_growth_percent": 0,
     "monthly_cost_growth_percent": 0,
 }
+
+
+
+def kpi_helper(kpi) -> dict:
+    return {
+        "id": str(kpi["_id"]),
+        "name": kpi["name"],
+        "family": kpi.get("family", "technical"),
+        "service": kpi.get("service", ""),
+        "objective": kpi.get("objective", ""),
+        "description": kpi.get("description", ""),
+        "owner": kpi.get("owner", ""),
+        "source": kpi.get("source", ""),
+        "frequency": kpi.get("frequency", "Mensuelle"),
+        "unit": kpi.get("unit", "%"),
+        "comparator": kpi.get("comparator", "gte"),
+        "target_value": kpi.get("target_value", 0),
+        "observed_value": kpi.get("observed_value", 0),
+        "period": kpi.get("period", ""),
+        "trend": kpi.get("trend", "stable"),
+        "formula_type": kpi.get("formula_type", "manual"),
+        "formula_inputs": kpi.get("formula_inputs", {}),
+        "is_sla": kpi.get("is_sla", False),
+        "sla_target": kpi.get("sla_target", 0),
+        "criticality": kpi.get("criticality", "Moyenne"),
+        "action_plan": kpi.get("action_plan", ""),
+        "display_order": kpi.get("display_order", 0),
+    }
 
 
 def roadmap_context_helper(context) -> dict:

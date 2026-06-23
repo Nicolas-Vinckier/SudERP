@@ -234,3 +234,52 @@ class UpdateRoadmapProjectModel(BaseModel):
     phase: Optional[str] = None
     owner: Optional[str] = None
     kpi: Optional[str] = None
+
+
+
+class KpiIndicatorSchema(BaseModel):
+    name: str = Field(..., min_length=1)
+    family: str = Field(default="technical")
+    service: str = Field(default="")
+    objective: str = Field(default="")
+    description: str = Field(default="")
+    owner: str = Field(default="")
+    source: str = Field(default="")
+    frequency: str = Field(default="Mensuelle")
+    unit: str = Field(default="%")
+    comparator: str = Field(default="gte")
+    target_value: float = Field(default=0)
+    observed_value: float = Field(default=0)
+    period: str = Field(default="")
+    trend: str = Field(default="stable")
+    formula_type: str = Field(default="manual")
+    formula_inputs: dict[str, float] = Field(default_factory=dict)
+    is_sla: bool = Field(default=False)
+    sla_target: float = Field(default=0, ge=0, le=100)
+    criticality: str = Field(default="Moyenne")
+    action_plan: str = Field(default="")
+    display_order: int = Field(default=0)
+
+
+class UpdateKpiIndicatorModel(BaseModel):
+    name: Optional[str] = Field(None, min_length=1)
+    family: Optional[str] = None
+    service: Optional[str] = None
+    objective: Optional[str] = None
+    description: Optional[str] = None
+    owner: Optional[str] = None
+    source: Optional[str] = None
+    frequency: Optional[str] = None
+    unit: Optional[str] = None
+    comparator: Optional[str] = None
+    target_value: Optional[float] = None
+    observed_value: Optional[float] = None
+    period: Optional[str] = None
+    trend: Optional[str] = None
+    formula_type: Optional[str] = None
+    formula_inputs: Optional[dict[str, float]] = None
+    is_sla: Optional[bool] = None
+    sla_target: Optional[float] = Field(None, ge=0, le=100)
+    criticality: Optional[str] = None
+    action_plan: Optional[str] = None
+    display_order: Optional[int] = None

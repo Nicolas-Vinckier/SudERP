@@ -13,6 +13,8 @@ from database import (
     budget_project_collection,
     budget_project_helper,
     risk_collection,
+    kpi_collection,
+    kpi_helper,
     risk_helper,
     roadmap_context_collection,
     roadmap_context_helper,
@@ -25,10 +27,12 @@ from models import (
     BudgetEmployeeSchema,
     BudgetExpenseSchema,
     BudgetProjectSchema,
+    KpiIndicatorSchema,
     RiskSchema,
     UpdateBudgetEmployeeModel,
     UpdateBudgetExpenseModel,
     UpdateBudgetProjectModel,
+    UpdateKpiIndicatorModel,
     UpdateRiskModel,
     BudgetSettingsSchema,
     UpdateBudgetSettingsModel,
@@ -327,6 +331,54 @@ async def delete_roadmap_project(id: str):
     if delete_result.deleted_count == 1:
         return {"status": "Successfully deleted roadmap project"}
     raise HTTPException(status_code=404, detail="Roadmap project not found")
+
+
+@app.post("/kpi-indicators/")
+async def add_kpi_indicator(kpi: KpiIndicatorSchema):
+    kpi_dict = kpi.model_dump()
+    new_kpi = await kpi_collection.insert_one(kpi_dict)
+    created_kpi = await kpi_collection.find_one({"_id": new_kpi.inserted_id})
+    return kpi_helper(created_kpi)
+
+
+@app.get("/kpi-indicators/")
+async def get_kpi_indicators():
+    kpis = []
+    async for kpi in kpi_collection.find().sort("display_order", 1):
+        kpis.append(kpi_helper(kpi))
+    return kpis
+
+
+@app.get("/kpi-indicators/{id}")
+async def get_kpi_indicator(id: str):
+    kpi_id = parse_object_id(id)
+    kpi = await kpi_collection.find_one({"_id": kpi_id})
+    if kpi:
+        return kpi_helper(kpi)
+    raise HTTPException(status_code=404, detail="KPI indicator not found")
+
+
+@app.put("/kpi-indicators/{id}")
+async def update_kpi_indicator(id: str, req: UpdateKpiIndicatorModel):
+    kpi_id = parse_object_id(id)
+    req_dict = {k: v for k, v in req.model_dump().items() if v is not None}
+    update_result = await kpi_collection.update_one({"_id": kpi_id}, {"$set": req_dict})
+    if update_result.modified_count == 1:
+        updated_kpi = await kpi_collection.find_one({"_id": kpi_id})
+        return kpi_helper(updated_kpi)
+    existing_kpi = await kpi_collection.find_one({"_id": kpi_id})
+    if existing_kpi:
+        return kpi_helper(existing_kpi)
+    raise HTTPException(status_code=404, detail="KPI indicator not found")
+
+
+@app.delete("/kpi-indicators/{id}")
+async def delete_kpi_indicator(id: str):
+    kpi_id = parse_object_id(id)
+    delete_result = await kpi_collection.delete_one({"_id": kpi_id})
+    if delete_result.deleted_count == 1:
+        return {"status": "Successfully deleted KPI indicator"}
+    raise HTTPException(status_code=404, detail="KPI indicator not found")
 
 
 @app.get("/settings/budget")
