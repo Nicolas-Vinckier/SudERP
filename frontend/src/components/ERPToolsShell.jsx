@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
+import DbDataButton from './DbDataButton';
 import ThemeToggle from './ThemeToggle';
 import useTheme from '../hooks/useTheme';
 import { erpTools } from '../tools/erpTools';
 
 export default function ERPToolsShell() {
   const [activeToolId, setActiveToolId] = useState(erpTools[0]?.id);
+  const [toolRefreshVersion, setToolRefreshVersion] = useState(0);
   const { isLightTheme, toggleTheme } = useTheme();
 
   const activeTool = useMemo(
@@ -57,7 +59,17 @@ export default function ERPToolsShell() {
       </aside>
 
       <section className="tool-content" aria-label={activeTool.title}>
-        <ActiveToolComponent />
+        <div className="tool-data-toolbar glass-panel no-print">
+          <div>
+            <p className="eyebrow">Outil actif</p>
+            <h2>{activeTool.title}</h2>
+          </div>
+          <DbDataButton
+            tool={activeTool}
+            onImported={() => setToolRefreshVersion((version) => version + 1)}
+          />
+        </div>
+        <ActiveToolComponent key={`${activeTool.id}-${toolRefreshVersion}`} />
       </section>
     </main>
   );

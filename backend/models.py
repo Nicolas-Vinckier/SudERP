@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Any, Optional
 
 
 class RiskSchema(BaseModel):
@@ -291,3 +291,8 @@ class UpdateKpiIndicatorModel(BaseModel):
     criticality: Optional[str] = None
     action_plan: Optional[str] = None
     display_order: Optional[int] = None
+
+
+class ToolDbDataImportSchema(BaseModel):
+    replace_existing: bool = Field(default=True)
+    data: dict[str, Any] = Field(default_factory=dict)

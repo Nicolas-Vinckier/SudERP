@@ -2246,3 +2246,174 @@ textarea {
     flex: 1 1 auto;
   }
 }
+
+/* Generic DB data import/export controls */
+.tool-data-toolbar {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.tool-data-toolbar h2 {
+  font-size: 1.35rem;
+  line-height: 1.2;
+}
+
+.db-data-button {
+  flex: 0 0 auto;
+  text-transform: lowercase;
+  width: auto;
+}
+
+.db-data-modal-backdrop {
+  align-items: center;
+  background: rgba(2, 6, 23, 0.72);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1.5rem;
+  position: fixed;
+  z-index: 100;
+}
+
+.db-data-modal {
+  max-height: calc(100vh - 3rem);
+  max-width: 980px;
+  overflow: auto;
+  width: min(980px, 100%);
+}
+
+.db-data-modal-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.db-data-modal-header h2 {
+  margin-bottom: 0.35rem;
+}
+
+.db-data-modal-header p:last-child {
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.icon-btn {
+  align-items: center;
+  background: var(--surface-strong-color);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 900;
+  height: 2.25rem;
+  justify-content: center;
+  width: 2.25rem;
+}
+
+.icon-btn:hover {
+  background: var(--nav-item-active-bg);
+  border-color: var(--nav-item-active-border);
+}
+
+.db-data-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  margin-top: 1rem;
+}
+
+.db-data-card {
+  background: var(--control-bg-color);
+  border: 1px solid var(--border-color);
+  border-radius: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem;
+}
+
+.db-data-card h3 {
+  font-size: 1.05rem;
+}
+
+.db-data-card p,
+.db-data-textarea-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.db-data-import-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.db-data-textarea-label {
+  font-weight: 700;
+}
+
+.danger-outline-btn {
+  background: color-mix(in srgb, var(--danger-color) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--danger-color) 48%, transparent);
+  box-shadow: none;
+  color: var(--text-primary);
+}
+
+.danger-outline-btn:hover {
+  background: color-mix(in srgb, var(--danger-color) 24%, transparent);
+  border-color: var(--danger-color);
+  box-shadow: none;
+}
+
+.success-message {
+  background: color-mix(in srgb, var(--success-color) 16%, transparent);
+  border-color: color-mix(in srgb, var(--success-color) 45%, transparent);
+}
+
+.error-message {
+  background: color-mix(in srgb, var(--danger-color) 16%, transparent);
+  border-color: color-mix(in srgb, var(--danger-color) 45%, transparent);
+}
+
+.visually-hidden {
+  border: 0;
+  clip: rect(0 0 0 0);
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  padding: 0;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
+}
+
+@media print {
+  .no-print,
+  .db-data-modal-backdrop {
+    display: none !important;
+  }
+}
+
+@media (max-width: 780px) {
+  .tool-data-toolbar,
+  .db-data-modal-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .db-data-button,
+  .db-data-grid {
+    width: 100%;
+  }
+
+  .db-data-grid {
+    grid-template-columns: 1fr;
+  }
+}

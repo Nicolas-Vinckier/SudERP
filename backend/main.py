@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
 from fastapi import FastAPI, HTTPException
@@ -30,6 +32,8 @@ from models import (
     KpiBulkCreateSchema,
     KpiIndicatorSchema,
     RiskSchema,
+    RoadmapContextSchema,
+    ToolDbDataImportSchema,
     UpdateBudgetEmployeeModel,
     UpdateBudgetExpenseModel,
     UpdateBudgetProjectModel,
@@ -58,6 +62,184 @@ def parse_object_id(id: str) -> ObjectId:
         return ObjectId(id)
     except InvalidId as exc:
         raise HTTPException(status_code=400, detail="Invalid resource id") from exc
+
+
+SUPPORTED_TOOL_IDS = {
+    "risk-matrix",
+    "budget-arbitrage",
+    "strategic-roadmap",
+    "kpi-pilotage",
+}
+
+
+def clean_import_record(record: dict) -> dict:
+    return {key: value for key, value in record.items() if key not in {"id", "_id"}}
+
+
+def clean_import_records(records) -> list[dict]:
+    if records is None:
+        return []
+    if not isinstance(records, list):
+        raise HTTPException(status_code=422, detail="Expected a JSON array for records")
+    return [clean_import_record(record) for record in records if isinstance(record, dict)]
+
+
+def build_export_payload(tool_id: str, data: dict) -> dict:
+    return {
+        "schema_version": 1,
+        "tool_id": tool_id,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "data": data,
+    }
+
+
+async def export_tool_data(tool_id: str) -> dict:
+    if tool_id == "risk-matrix":
+        risks = []
+        async for risk in risk_collection.find():
+            risks.append(risk_helper(risk))
+        return build_export_payload(tool_id, {"risks": risks})
+
+    if tool_id == "budget-arbitrage":
+        settings = await settings_collection.find_one({"_id": "global_budget"})
+        projects = []
+        employees = []
+        expenses = []
+
+        async for project in budget_project_collection.find():
+            projects.append(budget_project_helper(project))
+        async for employee in budget_employee_collection.find():
+            employees.append(budget_employee_helper(employee))
+        async for expense in budget_expense_collection.find():
+            expenses.append(budget_expense_helper(expense))
+
+        return build_export_payload(tool_id, {
+            "settings": settings_helper(settings or DEFAULT_BUDGET_SETTINGS),
+            "projects": projects,
+            "employees": employees,
+            "expenses": expenses,
+        })
+
+    if tool_id == "strategic-roadmap":
+        context = await roadmap_context_collection.find_one({"_id": "global_roadmap"})
+        projects = []
+        async for project in roadmap_project_collection.find():
+            projects.append(roadmap_project_helper(project))
+
+        return build_export_payload(tool_id, {
+            "context": roadmap_context_helper(context or DEFAULT_ROADMAP_CONTEXT),
+            "projects": projects,
+        })
+
+    if tool_id == "kpi-pilotage":
+        indicators = []
+        async for indicator in kpi_collection.find().sort("display_order", 1):
+            indicators.append(kpi_helper(indicator))
+        return build_export_payload(tool_id, {"indicators": indicators})
+
+    raise HTTPException(status_code=404, detail="Unsupported tool id")
+
+
+async def import_risk_matrix_data(data: dict, replace_existing: bool) -> dict:
+    risks = [RiskSchema(**record).model_dump() for record in clean_import_records(data.get("risks", []))]
+    if replace_existing:
+        await risk_collection.delete_many({})
+    if risks:
+        await risk_collection.insert_many(risks)
+    return {"imported": {"risks": len(risks)}}
+
+
+async def import_budget_arbitrage_data(data: dict, replace_existing: bool) -> dict:
+    settings_data = clean_import_record(data.get("settings", {})) if isinstance(data.get("settings", {}), dict) else {}
+    projects = [BudgetProjectSchema(**record).model_dump() for record in clean_import_records(data.get("projects", []))]
+    employees = [BudgetEmployeeSchema(**record).model_dump() for record in clean_import_records(data.get("employees", []))]
+    expenses = [BudgetExpenseSchema(**record).model_dump() for record in clean_import_records(data.get("expenses", []))]
+
+    if replace_existing:
+        await budget_project_collection.delete_many({})
+        await budget_employee_collection.delete_many({})
+        await budget_expense_collection.delete_many({})
+
+    if settings_data:
+        settings = BudgetSettingsSchema(**settings_data).model_dump()
+        await settings_collection.update_one(
+            {"_id": "global_budget"}, {"$set": settings}, upsert=True
+        )
+    if projects:
+        await budget_project_collection.insert_many(projects)
+    if employees:
+        await budget_employee_collection.insert_many(employees)
+    if expenses:
+        await budget_expense_collection.insert_many(expenses)
+
+    return {
+        "imported": {
+            "settings": 1 if settings_data else 0,
+            "projects": len(projects),
+            "employees": len(employees),
+            "expenses": len(expenses),
+        }
+    }
+
+
+async def import_strategic_roadmap_data(data: dict, replace_existing: bool) -> dict:
+    context_data = clean_import_record(data.get("context", {})) if isinstance(data.get("context", {}), dict) else {}
+    projects = [RoadmapProjectSchema(**record).model_dump() for record in clean_import_records(data.get("projects", []))]
+
+    if replace_existing:
+        await roadmap_project_collection.delete_many({})
+
+    if context_data:
+        context = RoadmapContextSchema(**context_data).model_dump()
+        await roadmap_context_collection.update_one(
+            {"_id": "global_roadmap"}, {"$set": context}, upsert=True
+        )
+    if projects:
+        await roadmap_project_collection.insert_many(projects)
+
+    return {
+        "imported": {
+            "context": 1 if context_data else 0,
+            "projects": len(projects),
+        }
+    }
+
+
+async def import_kpi_pilotage_data(data: dict, replace_existing: bool) -> dict:
+    indicators = [KpiIndicatorSchema(**record).model_dump() for record in clean_import_records(data.get("indicators", []))]
+    if replace_existing:
+        await kpi_collection.delete_many({})
+    if indicators:
+        await kpi_collection.insert_many(indicators)
+    return {"imported": {"indicators": len(indicators)}}
+
+
+async def import_tool_data(tool_id: str, data: dict, replace_existing: bool) -> dict:
+    if tool_id == "risk-matrix":
+        return await import_risk_matrix_data(data, replace_existing)
+    if tool_id == "budget-arbitrage":
+        return await import_budget_arbitrage_data(data, replace_existing)
+    if tool_id == "strategic-roadmap":
+        return await import_strategic_roadmap_data(data, replace_existing)
+    if tool_id == "kpi-pilotage":
+        return await import_kpi_pilotage_data(data, replace_existing)
+    raise HTTPException(status_code=404, detail="Unsupported tool id")
+
+
+
+@app.get("/tools/{tool_id}/db-data")
+async def get_tool_db_data(tool_id: str):
+    if tool_id not in SUPPORTED_TOOL_IDS:
+        raise HTTPException(status_code=404, detail="Unsupported tool id")
+    return await export_tool_data(tool_id)
+
+
+@app.post("/tools/{tool_id}/db-data/import")
+async def import_tool_db_data(tool_id: str, payload: ToolDbDataImportSchema):
+    if tool_id not in SUPPORTED_TOOL_IDS:
+        raise HTTPException(status_code=404, detail="Unsupported tool id")
+    result = await import_tool_data(tool_id, payload.data, payload.replace_existing)
+    return {"status": "imported", "tool_id": tool_id, **result}
 
 
 @app.get("/")
