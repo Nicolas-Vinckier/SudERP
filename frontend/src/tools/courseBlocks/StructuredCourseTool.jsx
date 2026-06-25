@@ -384,14 +384,18 @@ export default function StructuredCourseTool({ config }) {
   };
 
   const previewPdf = () => {
-    const popup = window.open('', '_blank', 'noopener,noreferrer');
-    if (!popup) {
-      setMessage('Le navigateur a bloque l ouverture de l apercu PDF.');
+    const html = reportHtml({ autoPrint: true });
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const previewWindow = window.open(url, '_blank', 'width=1200,height=900');
+
+    if (!previewWindow) {
+      URL.revokeObjectURL(url);
+      setMessage('Le navigateur a bloque l ouverture de l apercu PDF. Autorise les popups ou utilise l export HTML.');
       return;
     }
-    popup.document.open();
-    popup.document.write(reportHtml({ autoPrint: true }));
-    popup.document.close();
+
+    window.setTimeout(() => URL.revokeObjectURL(url), 60000);
   };
 
   return (
