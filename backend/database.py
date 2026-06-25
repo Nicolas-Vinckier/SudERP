@@ -14,6 +14,7 @@ settings_collection = database.get_collection("settings")
 roadmap_context_collection = database.get_collection("roadmap_context")
 roadmap_project_collection = database.get_collection("roadmap_projects")
 kpi_collection = database.get_collection("kpi_indicators")
+course_tool_collection = database.get_collection("course_tools")
 
 DEFAULT_ROADMAP_CONTEXT = {
     "_id": "global_roadmap",

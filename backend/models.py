@@ -293,6 +293,18 @@ class UpdateKpiIndicatorModel(BaseModel):
     display_order: Optional[int] = None
 
 
+class CourseToolContextSchema(BaseModel):
+    context: dict[str, Any] = Field(default_factory=dict)
+
+
+class CourseToolItemSchema(BaseModel):
+    data: dict[str, Any] = Field(default_factory=dict)
+
+
+class UpdateCourseToolItemSchema(BaseModel):
+    data: dict[str, Any] = Field(default_factory=dict)
+
+
 class ToolDbDataImportSchema(BaseModel):
     replace_existing: bool = Field(default=True)
     data: dict[str, Any] = Field(default_factory=dict)

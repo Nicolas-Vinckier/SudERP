@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from uuid import uuid4
 
 from bson.errors import InvalidId
 from bson.objectid import ObjectId
@@ -16,6 +17,7 @@ from database import (
     budget_project_helper,
     risk_collection,
     kpi_collection,
+    course_tool_collection,
     kpi_helper,
     risk_helper,
     roadmap_context_collection,
@@ -42,6 +44,9 @@ from models import (
     BudgetSettingsSchema,
     UpdateBudgetSettingsModel,
     RoadmapProjectSchema,
+    CourseToolContextSchema,
+    CourseToolItemSchema,
+    UpdateCourseToolItemSchema,
     UpdateRoadmapContextModel,
     UpdateRoadmapProjectModel,
 )
@@ -64,11 +69,70 @@ def parse_object_id(id: str) -> ObjectId:
         raise HTTPException(status_code=400, detail="Invalid resource id") from exc
 
 
+COURSE_TOOL_DEFINITIONS = {
+    "strategy-pilotage": {
+        "context": {
+            "company_context": "",
+            "si_role": "",
+            "business_alignment": "",
+            "dsi_positioning": "",
+        },
+        "collections": {
+            "components": [],
+            "axes": [],
+            "decisions": [],
+        },
+    },
+    "si-cartography": {
+        "context": {
+            "scope": "",
+            "architecture_summary": "",
+            "security_zones": "",
+            "spof_summary": "",
+        },
+        "collections": {
+            "applications": [],
+            "flows": [],
+            "dependencies": [],
+        },
+    },
+    "si-diagnostic": {
+        "context": {
+            "diagnostic_scope": "",
+            "executive_summary": "",
+            "main_alerts": "",
+            "decision_guidance": "",
+        },
+        "collections": {
+            "assessments": [],
+            "swot": [],
+            "recommendations": [],
+        },
+    },
+    "si-governance": {
+        "context": {
+            "governance_principles": "",
+            "decision_model": "",
+            "escalation_rules": "",
+            "reporting_model": "",
+        },
+        "collections": {
+            "actors": [],
+            "committees": [],
+            "raci": [],
+            "decisions": [],
+        },
+    },
+}
+
+COURSE_TOOL_IDS = set(COURSE_TOOL_DEFINITIONS.keys())
+
 SUPPORTED_TOOL_IDS = {
     "risk-matrix",
     "budget-arbitrage",
     "strategic-roadmap",
     "kpi-pilotage",
+    *COURSE_TOOL_IDS,
 }
 
 
@@ -93,7 +157,82 @@ def build_export_payload(tool_id: str, data: dict) -> dict:
     }
 
 
+def course_tool_default_doc(tool_id: str) -> dict:
+    definition = COURSE_TOOL_DEFINITIONS[tool_id]
+    return {
+        "_id": tool_id,
+        "context": dict(definition["context"]),
+        "collections": {key: list(value) for key, value in definition["collections"].items()},
+    }
+
+
+def public_course_tool_doc(doc: dict) -> dict:
+    return {
+        "id": str(doc["_id"]),
+        "context": doc.get("context", {}),
+        "collections": doc.get("collections", {}),
+    }
+
+
+def export_course_tool_data(doc: dict) -> dict:
+    collections = doc.get("collections", {})
+    return {"context": doc.get("context", {}), **collections}
+
+
+def normalize_course_tool_collections(tool_id: str, data: dict) -> dict:
+    definition = COURSE_TOOL_DEFINITIONS[tool_id]
+    default_collections = {key: [] for key in definition["collections"].keys()}
+    imported_collections = data.get("collections") if isinstance(data.get("collections"), dict) else None
+
+    if imported_collections is None:
+        imported_collections = {key: value for key, value in data.items() if key != "context"}
+
+    for key, value in imported_collections.items():
+        if isinstance(value, list):
+            default_collections[key] = [normalize_course_tool_item(item) for item in value if isinstance(item, dict)]
+
+    return default_collections
+
+
+def normalize_course_tool_item(item: dict) -> dict:
+    normalized = dict(item)
+    normalized["id"] = str(normalized.get("id") or uuid4().hex)
+    return normalized
+
+
+async def ensure_course_tool(tool_id: str) -> dict:
+    if tool_id not in COURSE_TOOL_IDS:
+        raise HTTPException(status_code=404, detail="Unsupported course tool id")
+
+    existing = await course_tool_collection.find_one({"_id": tool_id})
+    if existing:
+        definition = COURSE_TOOL_DEFINITIONS[tool_id]
+        changed = False
+        context = existing.get("context", {})
+        collections = existing.get("collections", {})
+        for key, value in definition["context"].items():
+            if key not in context:
+                context[key] = value
+                changed = True
+        for key, value in definition["collections"].items():
+            if key not in collections:
+                collections[key] = list(value)
+                changed = True
+        if changed:
+            await course_tool_collection.update_one({"_id": tool_id}, {"$set": {"context": context, "collections": collections}})
+            existing = await course_tool_collection.find_one({"_id": tool_id})
+        return existing
+
+    doc = course_tool_default_doc(tool_id)
+    await course_tool_collection.insert_one(doc)
+    return doc
+
+
 async def export_tool_data(tool_id: str) -> dict:
+    if tool_id in COURSE_TOOL_IDS:
+        doc = await ensure_course_tool(tool_id)
+        return build_export_payload(tool_id, export_course_tool_data(doc))
+
     if tool_id == "risk-matrix":
         risks = []
         async for risk in risk_collection.find():
@@ -214,7 +353,35 @@ async def import_kpi_pilotage_data(data: dict, replace_existing: bool) -> dict:
     return {"imported": {"indicators": len(indicators)}}
 
 
+async def import_course_tool_data(tool_id: str, data: dict, replace_existing: bool) -> dict:
+    context = data.get("context", {}) if isinstance(data.get("context", {}), dict) else {}
+    collections = normalize_course_tool_collections(tool_id, data)
+
+    if replace_existing:
+        await course_tool_collection.replace_one(
+            {"_id": tool_id},
+            {"_id": tool_id, "context": context, "collections": collections},
+            upsert=True,
+        )
+    else:
+        existing = await ensure_course_tool(tool_id)
+        merged_context = {**existing.get("context", {}), **context}
+        merged_collections = existing.get("collections", {})
+        for key, records in collections.items():
+            merged_collections.setdefault(key, [])
+            merged_collections[key].extend(records)
+        await course_tool_collection.update_one(
+            {"_id": tool_id},
+            {"$set": {"context": merged_context, "collections": merged_collections}},
+            upsert=True,
+        )
+
+    return {"imported": {key: len(value) for key, value in collections.items()}, "context": 1 if context else 0}
+
+
 async def import_tool_data(tool_id: str, data: dict, replace_existing: bool) -> dict:
+    if tool_id in COURSE_TOOL_IDS:
+        return await import_course_tool_data(tool_id, data, replace_existing)
     if tool_id == "risk-matrix":
         return await import_risk_matrix_data(data, replace_existing)
     if tool_id == "budget-arbitrage":
@@ -245,6 +412,66 @@ async def import_tool_db_data(tool_id: str, payload: ToolDbDataImportSchema):
 @app.get("/")
 async def root():
     return {"message": "Welcome to Sud ERP Tools API"}
+
+
+@app.get("/course-tools/{tool_id}")
+async def get_course_tool(tool_id: str):
+    doc = await ensure_course_tool(tool_id)
+    return public_course_tool_doc(doc)
+
+
+@app.put("/course-tools/{tool_id}/context")
+async def update_course_tool_context(tool_id: str, payload: CourseToolContextSchema):
+    await ensure_course_tool(tool_id)
+    await course_tool_collection.update_one(
+        {"_id": tool_id},
+        {"$set": {"context": payload.context}},
+        upsert=True,
+    )
+    doc = await course_tool_collection.find_one({"_id": tool_id})
+    return public_course_tool_doc(doc)
+
+
+@app.post("/course-tools/{tool_id}/items/{collection_name}")
+async def add_course_tool_item(tool_id: str, collection_name: str, payload: CourseToolItemSchema):
+    doc = await ensure_course_tool(tool_id)
+    collections = doc.get("collections", {})
+    collections.setdefault(collection_name, [])
+    item = normalize_course_tool_item(payload.data)
+    collections[collection_name].append(item)
+    await course_tool_collection.update_one({"_id": tool_id}, {"$set": {"collections": collections}})
+    return item
+
+
+@app.put("/course-tools/{tool_id}/items/{collection_name}/{item_id}")
+async def update_course_tool_item(tool_id: str, collection_name: str, item_id: str, payload: UpdateCourseToolItemSchema):
+    doc = await ensure_course_tool(tool_id)
+    collections = doc.get("collections", {})
+    items = collections.get(collection_name, [])
+    updated_item = None
+    for index, item in enumerate(items):
+        if str(item.get("id")) == item_id:
+            updated_item = {**item, **payload.data, "id": item_id}
+            items[index] = updated_item
+            break
+    if updated_item is None:
+        raise HTTPException(status_code=404, detail="Course tool item not found")
+    collections[collection_name] = items
+    await course_tool_collection.update_one({"_id": tool_id}, {"$set": {"collections": collections}})
+    return updated_item
+
+
+@app.delete("/course-tools/{tool_id}/items/{collection_name}/{item_id}")
+async def delete_course_tool_item(tool_id: str, collection_name: str, item_id: str):
+    doc = await ensure_course_tool(tool_id)
+    collections = doc.get("collections", {})
+    items = collections.get(collection_name, [])
+    next_items = [item for item in items if str(item.get("id")) != item_id]
+    if len(next_items) == len(items):
+        raise HTTPException(status_code=404, detail="Course tool item not found")
+    collections[collection_name] = next_items
+    await course_tool_collection.update_one({"_id": tool_id}, {"$set": {"collections": collections}})
+    return {"status": "Successfully deleted course tool item"}
 
 
 @app.post("/risks/")

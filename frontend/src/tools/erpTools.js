@@ -1,9 +1,44 @@
+import { createElement } from 'react';
 import BudgetArbitrageTool from './budgetArbitrage/BudgetArbitrageTool';
 import RiskMatrixTool from './riskMatrix/RiskMatrixTool';
 import StrategicRoadmapTool from './strategicRoadmap/StrategicRoadmapTool';
 import KpiPilotageTool from './kpiPilotage/KpiPilotageTool';
+import StructuredCourseTool from './courseBlocks/StructuredCourseTool';
+import { courseToolConfigs } from './courseBlocks/courseToolConfigs';
+
+const makeCourseTool = (config) => function CourseToolWrapper() {
+  return createElement(StructuredCourseTool, { config });
+};
 
 export const erpTools = [
+  {
+    id: 'strategy-pilotage',
+    title: courseToolConfigs['strategy-pilotage'].title,
+    shortTitle: courseToolConfigs['strategy-pilotage'].shortTitle,
+    description: courseToolConfigs['strategy-pilotage'].description,
+    component: makeCourseTool(courseToolConfigs['strategy-pilotage'])
+  },
+  {
+    id: 'si-cartography',
+    title: courseToolConfigs['si-cartography'].title,
+    shortTitle: courseToolConfigs['si-cartography'].shortTitle,
+    description: courseToolConfigs['si-cartography'].description,
+    component: makeCourseTool(courseToolConfigs['si-cartography'])
+  },
+  {
+    id: 'si-diagnostic',
+    title: courseToolConfigs['si-diagnostic'].title,
+    shortTitle: courseToolConfigs['si-diagnostic'].shortTitle,
+    description: courseToolConfigs['si-diagnostic'].description,
+    component: makeCourseTool(courseToolConfigs['si-diagnostic'])
+  },
+  {
+    id: 'si-governance',
+    title: courseToolConfigs['si-governance'].title,
+    shortTitle: courseToolConfigs['si-governance'].shortTitle,
+    description: courseToolConfigs['si-governance'].description,
+    component: makeCourseTool(courseToolConfigs['si-governance'])
+  },
   {
     id: 'risk-matrix',
     title: 'Risk Matrix',
